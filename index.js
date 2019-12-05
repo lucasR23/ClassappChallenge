@@ -19,6 +19,7 @@ const removeSpaces = (array) =>{
 let index = 1; // used to find the heading
 let jsonResult = []; // result
 
+//mapping of indexes
 let heading = {"fullname": 0, "eid": 0, "class": [], "email": [],"phone": [],"invisible":0,"see_all":0};
 
 let isPhone = /^[\(]?[1-9]{2}[\)]?[ ]?(?:[2-8]|9[1-9])[0-9]{3}[\- ]?[0-9]{4}$/; //phone regex
@@ -147,10 +148,10 @@ fs.createReadStream('input.csv')
             }
         }
 
-        index += 1
+        index += 1 //represent going to the next line - used to know when we are in the heading
     })
     .on('end', () => {
-        fs.writeFile('myjsonfile.json', JSON.stringify(jsonResult), 'utf8', () =>{
+        fs.writeFile('output.json', JSON.stringify(jsonResult), 'utf8', () =>{
             console.log("JSON file created");
         });
     })
