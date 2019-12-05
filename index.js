@@ -19,9 +19,7 @@ const removeSpaces = (array) =>{
 let index = 1; // used to find the heading
 let jsonResult = []; // result
 
-let type = {} //save the types defined in the heading
-
-let tag = {} //save the tags defined in the heading
+let heading = {"fullname": 0, "eid": 0, "class": [], "email": [],"phone": [],"invisible":0,"see_all":0};
 
 let isPhone = /^[\(]?[1-9]{2}[\)]?[ ]?(?:[2-8]|9[1-9])[0-9]{3}[\- ]?[0-9]{4}$/; //phone regex
 let isEmail = /^[^:)(*&%¨$#]*$/; // simple email regex only to avoid some characters
@@ -31,58 +29,89 @@ fs.createReadStream('input.csv')
     .on('error', error => console.error(error))
     .on('data', (row) => {
         if (index === 1){
-            //headline
-            row.filter(column => row.indexOf(column) >= 4 && row.indexOf(column) <= 9)
-                    .forEach(column =>{
-                        val = column.replace(",","").split(" ");
-                        type[row.indexOf(column)] = val[0]
-                        tag[row.indexOf(column)] = val.slice(1)
-                    })
+            //headline - create mapping 
+            row.forEach((column,index) =>{
+                val = column.replace(",","").split(" ");
+                
+                if(val[0] === "fullname"){
+                    heading.fullname = index;
+                }else if(val[0] === "eid"){
+                    heading.eid = index;
+                }else if(val[0] === "class"){
+                    heading.class.push(index);
+                }else if (val[0] === "email" ){
+                    heading.email.push({
+                        "tags": val.slice(1),
+                        "index": index
+                    });   
+                }else if (val[0] ==="phone"){
+                    heading.phone.push({
+                        "tags": val.slice(1),
+                        "index": index
+                    });
+                }else if(val[0] === "invisible"){
+                    heading.invisible =index;
+                }else if(val[0] === "see_all"){
+                    heading.see_all =index;
+                }             
+            })
+
+            console.log(heading);
         }else{
             //not headline
-            let fullname = row[0];
-            let eid = row[1];
+            let fullname = row[heading.fullname];
+            let eid = row[heading.eid];
             
-            let classes = toArray(row[2]);
-            classes = removeSpaces(classes.concat(toArray(row[3])));
+            let classes = []
+            heading.class.forEach((ele) => {
+                classes = classes.concat(toArray(row[ele]));
+            });
+            classes = removeSpaces(classes);
             
             let addresses = []
-            for(let index=4; index<=9; index++){
-                separedValue = row[index].split(/,|\//)
-                
+            heading.email.forEach(emailAddr => {
+                separedValue = row[emailAddr.index].split(/,|\//);
+                separedValue.forEach(address => {
+                    if (address.length>0 && isEmail.test(address) && !isPhone.test(address)){
+                        addresses.push({
+                            "type": "email",
+                            "tags": emailAddr.tags,
+                            "address": address
+                        });
+                    }
+                });
+            });
+
+            heading.phone.forEach(phoneAddr => {
+                separedValue = row[phoneAddr.index].split(/,|\//);
                 separedValue.forEach(address => {
                     
-                    if (type[index] === "email" && address.length>0 && isEmail.test(address) 
-                                                && !isPhone.test(address)){
-                        addresses.push({
-                            "type": type[index],
-                            "tags": tag[index],
-                            "address": address
-                        })
-                                    
-                    }else if (type[index] === "phone" && address.length>0 && isPhone.test(address)){
+                    if (address.length>0 && isPhone.test(address)){
                         try{
-                            const number = phoneUtil.parseAndKeepRawInput(address, 'BR');
+                            
+                            let number = phoneUtil.parseAndKeepRawInput(address, 'BR');
             
                             addresses.push({
-                                "type": type[index],
-                                "tags": tag[index],
+                                "type": "phone",
+                                "tags": phoneAddr.tags,
                                 "address": phoneUtil.format(number, PNF.E164).replace("+","")
                             })
                         }catch (err){
-                            console.log("the string: " + address + " is not a phone number, ignoring it...")
+                            console.log(err + "the string: " + address + " is not a phone number, ignoring it...")
                         }
                     }
-                })
-            }
+                });
+            })
             
             let invisible = false
-            if(row[10].length > 0 && (row[10] == '1' || row[10] == "yes")){
+            if(row[heading.invisible].length > 0 && (row[heading.invisible] == '1' 
+                                                    || row[heading.invisible] == "yes")){
                 invisible = true;
             }
             
             let seeAll = false
-            if(row[11].length > 0 && (row[11] == '1' || row[11] == "yes")){
+            if(row[heading.see_all].length > 0 && (row[heading.see_all] == '1' 
+                                                || row[heading.see_all] == "yes")){
                 seeAll = true;
             }
             
@@ -107,12 +136,12 @@ fs.createReadStream('input.csv')
                 student.addresses = student.addresses.concat(addresses);
 
                 //there is some new info
-                if(row[10].length != 0){
+                if(row[heading.invisible].length != 0){
                     student.invisible = invisible;
                 }
 
                 //there is some new info
-                if(row[11].length != 0){
+                if(row[heading.see_all].length != 0){
                     student.see_all = seeAll;
                 }
             }
