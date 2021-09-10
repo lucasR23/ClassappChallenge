@@ -1,4 +1,4 @@
-# ClassappChallenge
+# CSV Challenge
 Author: Lucas dos Santos Ramos
 
 This code implements a solution for the challenge found in: https://gist.github.com/lucas-brito/84a77f08115ae4b9b034c010ff2a2ab4
